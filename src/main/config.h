@@ -6,7 +6,7 @@
 #define ENCODER_PIN_B 19
 
 //MOTOR DRIVER
-#define MOTOR_PWM_PIN 25        //Speed Control
+#define MOTOR_PWM_PIN 4         //Speed Control
 #define MOTOR_IN1_PIN 26        //Direction Control
 #define MOTOR_IN2_PIN 27        //Direction Control
                                 //00, 01, 10, 11 -> Stop, Forward, Reverse, Brake

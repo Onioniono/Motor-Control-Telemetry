@@ -5,8 +5,6 @@ idf_component_register(
         "telemetry.c"
         "electronic_load.c"
         "duel_monitor.c"
-    REQUIRES
-        esp_driver_gpio
     INCLUDE_DIRS
         "."
 )
