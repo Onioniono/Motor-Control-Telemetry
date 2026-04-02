@@ -14,16 +14,19 @@
 #include "electronic_load.h"
 #include "duel_monitor.h"
 
-void task_setup(void)
+static void system_init(void)
 {
-    // Create FreeRTOS Tasks
-    // xTaskCreate(task_function, "Task Name", stack_size, parameters, priority, task_handle);
-    xTaskCreate(motor_control_task, "Motor Control Task", 4096, NULL, 4, NULL);         // High priority for motor control
+    motor_control_init(); // Initialize motor control peripherals
+}
+
+static void system_start_tasks(void)
+{
+    motor_control_start(); // Start the motor control task in FreeRTOS
     xTaskCreate(electronic_load_task, "Electronic Load Task", 4096, NULL, 3, NULL);     // Medium priority for load management
     xTaskCreate(duel_monitor_task, "Duel Monitor Task", 4096, NULL, 2, NULL);           // Medium priority for duel monitoring
     xTaskCreate(telemetry_task, "Telemetry Task", 4096, NULL, 1, NULL);                 // Low priority for telemetry
-    // Note: Stack size and priority are placeholders and may need adjustment based on actual task requirements
 }
+
 
 void app_main(void)
 {   
@@ -31,6 +34,7 @@ void app_main(void)
     printf("Hello world!\n");
     printf("ESP-IDF version: %s\n", esp_get_idf_version());
 
-    // Task Setup
-    task_setup();
+    // Start FreeRTOS Tasks
+    system_init();
+    system_start_tasks();
 }

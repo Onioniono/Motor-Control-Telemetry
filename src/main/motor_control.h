@@ -9,10 +9,11 @@
 #include "driver/ledc.h"
 #include "config.h"
 
-void motor_control_task(void *pvParameters);
-void motor_control_init(void); // Initialize motor control pins and peripherals
-void set_motor(int pwm_value, int dir); // Set motor PWM and direction
-void encoder_read(void); // Read encoder values
+extern int motor_pwm_value; // Test variable to hold current PWM value for motor control
+extern int motor_direction; // 1 for forward, -1 for reverse (for testing purposes
 
+void motor_control_init(void);                  // Initialize motor control pins and peripherals
+void motor_control_start(void);                 // Start the motor control task in FreeRTOS
+void motor_set(int pwm_value, int dir);         // Set motor PWM and direction
 
 #endif /* MOTOR_CONTROL_H */
