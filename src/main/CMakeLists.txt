@@ -3,8 +3,6 @@ idf_component_register(
         "main.c"
         "motor_control.c"
         "telemetry.c"
-        "electronic_load.c"
-        "duel_monitor.c"
     INCLUDE_DIRS
         "."
 )

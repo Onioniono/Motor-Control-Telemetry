@@ -31,9 +31,12 @@
 #define UART_RX_PIN 16         //Receive Commands from PC
 
 //SYSTEM PARAMETERS
+/* Motor Control */
 #define RPM_DEFAULT 300
 #define PID_SAMPLE_RATE_MS 10
 #define MOSFET_PWM_FREQ_HZ 1000
 #define MOTOR_PWM_FREQ_HZ 5000
+/* Telemetry */
+#define TELEMETRY_SAMPLE_RATE_MS 100
 
 #endif /* CONFIG_H */

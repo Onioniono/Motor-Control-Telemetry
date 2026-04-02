@@ -6,7 +6,7 @@ int motor_direction = 1; // 1 for forward, -1 for reverse (for testing purposes)
 
 /* Motor Control Task Configuration */
 #define MOTOR_CONTROL_TASK_STACK_SIZE 4096
-#define MOTOR_CONTROL_TASK_PRIORITY 4
+#define MOTOR_CONTROL_TASK_PRIORITY 2
 static TaskHandle_t motor_control_task_handle = NULL;
 
 /* Static function declarations */
@@ -80,10 +80,11 @@ void motor_control_start(void)
 }
 
 /*--------------------------------------------------
- * Function:    Set Motor PWM and Direction
- * Description: Sets the motor PWM duty cycle and direction based on input parameters
- * Parameters:  int pwm: PWM duty cycle (0-255)
- *              int dir: Direction (1 for forward, -1 for reverse)
+ * Function:    Motor Control Task Loop
+ * Description: Main loop for the motor control task, 
+ *              responsible for reading encoder values, 
+ *              computing PID, and setting motor PWM
+ * Parameters:  None
  * Returns:     None
  *-------------------------------------------------*/
 static void motor_control_task(void *pvParameters)
@@ -123,8 +124,9 @@ void motor_set(int pwm, int dir)
 }
 
 /*--------------------------------------------------
- * Function:    Read Encoder Values
- * Description: Reads the values from the magnetic encoder
+ * Function:    Encoder ISR Handler
+ * Description: Interrupt Service Routine for handling encoder events,
+ *              updates encoder state for processing in main control loop
  * Parameters:  None
  * Returns:     None
  *-------------------------------------------------*/
