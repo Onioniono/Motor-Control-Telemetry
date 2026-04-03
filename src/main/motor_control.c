@@ -10,16 +10,16 @@ int motor_direction = 1; // 1 for forward, -1 for reverse (for testing purposes)
 static TaskHandle_t motor_control_task_handle = NULL;
 
 /* Static function declarations */
-static void motor_control_task(void *pvParameters);
-static void IRAM_ATTR encoder_isr_handler(void *arg);
-static void encoder_read(void);
+static void motor_control_task(void *pvParameters);     // FreeRTOS task function for motor control loop
+static void IRAM_ATTR encoder_isr_handler(void *arg);   // ISR handler for encoder events, marked IRAM_ATTR for faster execution
+static void encoder_read(void);                         // Function to read encoder values and update state for PID calculations
 
 /* Encoder Variables */
-volatile int pos_i = 0;
-volatile int dir_i = 0;
-volatile int32_t deltaT_i = 0;
-volatile int64_t prevT_i = 0;
-static portMUX_TYPE encoderMux = portMUX_INITIALIZER_UNLOCKED;
+volatile int pos_i = 0;         // Current encoder position count
+volatile int dir_i = 0;         // Current encoder direction (1 for forward, -1 for reverse)
+volatile int32_t deltaT_i = 0;  // Time delta since last encoder event in microseconds, used for velocity calculation
+volatile int64_t prevT_i = 0;   // Timestamp of last encoder event in microseconds, used for velocity calculation
+static portMUX_TYPE encoderMux = portMUX_INITIALIZER_UNLOCKED;  // Mutex for protecting access to encoder state variables between ISR and task context
 
 /*--------------------------------------------------
  * Function:    Initalize Motor Control
@@ -140,30 +140,24 @@ void motor_set(int pwm, int dir)
 static void IRAM_ATTR encoder_isr_handler(void *arg)
 {
     // General idea:
-    /*
-    The handler is what will happen during the interrupt
-    e.g. - Read the state of encoder A and B pins
-         - Update a count variable based on the direction of rotation
-         - This count can then be processed in the main control loop to determine position/speed
-    Then encoder_read takes what the handler has accumulated
-    and modifies it once the task actually starts running. 
-    This way we minimize the work done in the ISR 
-    and avoid potential timing issues.
-    */
-   int b = gpio_get_level(ENCODER_PIN_B); // Read state of encoder B pin
-   int increment = 0;
-   (b > 0) ? (increment = 1) : (increment = -1); // Determine direction based on B pin state
-   
-    int64_t currT = esp_timer_get_time(); // Get current time in microseconds
-    int32_t deltaT = 0;
+    // - Read the state of encoder A and B pins
+    // - Update a count variable based on the direction of rotation
+    // - Count is processed in encoder_read to determine position/speed
 
-    portENTER_CRITICAL_ISR(&encoderMux); // Enter critical section to safely update shared encoder state
-    deltaT = (int32_t)(currT - prevT_i); // Calculate time since last encoder event
-    deltaT_i = deltaT; // Update global variable for time delta
-    dir_i = increment; // Update global variable for direction
-    pos_i += increment; // Update encoder count based on direction
-    prevT_i = currT; // Update previous time for next calculation
-    portEXIT_CRITICAL_ISR(&encoderMux); // Exit critical section
+   int b = gpio_get_level(ENCODER_PIN_B);           // Read state of encoder B pin
+   int increment = 0;
+   (b > 0) ? (increment = 1) : (increment = -1);    // Determine direction based on B pin state
+   
+    int64_t currT = esp_timer_get_time();   // Get current time in microseconds
+    int32_t deltaT = 0;                     // Variable to hold time delta since last encoder event
+
+    portENTER_CRITICAL_ISR(&encoderMux);    // Enter critical section to safely update shared encoder state
+    deltaT = (int32_t)(currT - prevT_i);    // Calculate time since last encoder event
+    deltaT_i = deltaT;                      // Update global variable for time delta
+    dir_i = increment;                      // Update global variable for direction
+    pos_i += increment;                     // Update encoder count based on direction
+    prevT_i = currT;                        // Update previous time for next calculation
+    portEXIT_CRITICAL_ISR(&encoderMux);     // Exit critical section
 }
 
 
@@ -179,6 +173,8 @@ static void IRAM_ATTR encoder_isr_handler(void *arg)
     // - Read encoder state accumulated from ISR events
     // - Convert counts to position / speed
     // - Update private module state for PID calculations
+
+    /* Velocity Measurement */
     int pos;
     int dir;
     int32_t deltaT;
@@ -195,5 +191,10 @@ static void IRAM_ATTR encoder_isr_handler(void *arg)
     } else {
         velocity = 0.0f; // If no time has passed, velocity is zero
     }
-    printf("Encoder Position: %d, Velocity: %.2f counts/s\n", pos, velocity); // Print encoder position and velocity for testing
+    
+    // For testing purposes, print the encoder position and velocity
+    printf("Velocity: %.2f counts/s\n", velocity); // Print encoder position and velocity for testing
+
+    /* Placeholder */
+    //
 }
