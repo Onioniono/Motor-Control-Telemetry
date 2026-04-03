@@ -34,8 +34,10 @@
 /* Motor Control */
 #define RPM_DEFAULT 300
 #define PID_SAMPLE_RATE_MS 10
-#define MOSFET_PWM_FREQ_HZ 1000
 #define MOTOR_PWM_FREQ_HZ 5000
+/* Encoder Control */
+#define ENCODER_PPR 240                 //Pulses Per Revolution for the encoder
+#define VELOCITY_RPM_CONVERSION 0.25f   // RPM (60 seconds / PPR) = 0.25 for 240 PPR encoder)
 /* Telemetry */
 #define TELEMETRY_SAMPLE_RATE_MS 100
 

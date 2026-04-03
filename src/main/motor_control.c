@@ -13,6 +13,7 @@ static TaskHandle_t motor_control_task_handle = NULL;
 static void motor_control_task(void *pvParameters);     // FreeRTOS task function for motor control loop
 static void IRAM_ATTR encoder_isr_handler(void *arg);   // ISR handler for encoder events, marked IRAM_ATTR for faster execution
 static void encoder_read(void);                         // Function to read encoder values and update state for PID calculations
+static float low_pass_filter(float v_now);              // Function to apply low-pass filter to velocity measurements (if needed)
 
 /* Encoder Variables */
 volatile int pos_i = 0;         // Current encoder position count
@@ -20,6 +21,10 @@ volatile int dir_i = 0;         // Current encoder direction (1 for forward, -1 
 volatile int32_t deltaT_i = 0;  // Time delta since last encoder event in microseconds, used for velocity calculation
 volatile int64_t prevT_i = 0;   // Timestamp of last encoder event in microseconds, used for velocity calculation
 static portMUX_TYPE encoderMux = portMUX_INITIALIZER_UNLOCKED;  // Mutex for protecting access to encoder state variables between ISR and task context
+
+/* Low Pass Filter Variables */
+static float v_filt = 0.0f;  // Filtered velocity value
+static float v_prev = 0.0f;  // Previous velocity value, used for low-pass filter calculations
 
 /*--------------------------------------------------
  * Function:    Initalize Motor Control
@@ -179,22 +184,40 @@ static void IRAM_ATTR encoder_isr_handler(void *arg)
     int dir;
     int32_t deltaT;
 
-    portENTER_CRITICAL(&encoderMux); // Enter critical section to safely read shared encoder state
-    pos = pos_i; // Read current encoder position
-    dir = dir_i; // Read current encoder direction
-    deltaT = deltaT_i; // Read time delta since last encoder event
-    portEXIT_CRITICAL(&encoderMux); // Exit critical section
+    portENTER_CRITICAL(&encoderMux);    // Enter critical section to safely read shared encoder state
+    pos = pos_i;                        // Read current encoder position
+    dir = dir_i;                        // Read current encoder direction
+    deltaT = deltaT_i;                  // Read time delta since last encoder event
+    portEXIT_CRITICAL(&encoderMux);     // Exit critical section
 
     float velocity = 0.0f;
+    float rpm = 0.0f;
     if (deltaT > 0) {
-        velocity = (dir * 1.0f) / (deltaT / 1000000.0f); // Calculate velocity in counts per second
+        velocity = low_pass_filter((dir * 1.0f) / (deltaT / 1000000.0f));        // Calculate velocity in counts per second
+        rpm = (velocity * VELOCITY_RPM_CONVERSION);                              // Convert velocity to RPM
     } else {
-        velocity = 0.0f; // If no time has passed, velocity is zero
+        velocity = 0.0f;    // If no time has passed, velocity is zero
+        rpm = 0.0f;         // If no time has passed, rpm is zero
     }
     
-    // For testing purposes, print the encoder position and velocity
-    printf("Velocity: %.2f counts/s\n", velocity); // Print encoder position and velocity for testing
+    // For testing purposes, print the encoder velocity in counts per second
+    //printf("Velocity: %.2f counts/s\n", velocity);
+    // For testing purposes, print the encoder rpm
+    printf("RPM: %.2f\n", rpm);
+}
 
-    /* Placeholder */
-    //
+/*--------------------------------------------------
+ * Function:    Low Pass Filter for Velocity
+ * Description: Applies a 15Hz LPF to reduce noise in velocity measurements
+ * Parameters:  float v_now: The current raw velocity measurement to be filtered
+ * Returns:     float: The filtered velocity value after applying the low-pass filter
+ *-------------------------------------------------*/
+static float low_pass_filter(float v_now)
+{
+    float v_filt_now = (0.6180*v_filt)
+                        +(0.1910*v_prev)
+                        +(0.1910*v_now);
+    v_prev = v_now;
+    v_filt = v_filt_now;
+    return v_filt_now;
 }
