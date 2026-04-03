@@ -1,7 +1,7 @@
 #include "motor_control.h"
 
 /* Test Variables for Motor Control */
-int motor_pwm_value = 255; // Test variable to hold current PWM value for motor control
+int motor_pwm_value = 128; // Test variable to hold current PWM value for motor control
 int motor_direction = 1; // 1 for forward, -1 for reverse (for testing purposes)
 
 /* Motor Control Task Configuration */
@@ -15,9 +15,10 @@ static void IRAM_ATTR encoder_isr_handler(void *arg);
 static void encoder_read(void);
 
 /* Encoder Variables */
-long prevT = 0;
-int posPrev = 0;
 volatile int pos_i = 0;
+volatile int dir_i = 0;
+volatile int32_t deltaT_i = 0;
+volatile int64_t prevT_i = 0;
 static portMUX_TYPE encoderMux = portMUX_INITIALIZER_UNLOCKED;
 
 /*--------------------------------------------------
@@ -153,9 +154,16 @@ static void IRAM_ATTR encoder_isr_handler(void *arg)
    int increment = 0;
    (b > 0) ? (increment = 1) : (increment = -1); // Determine direction based on B pin state
    
-   portENTER_CRITICAL(&encoderMux); // Enter critical section to safely update shared encoder state
-   pos_i += increment;              // Update Encoder Count
-   portEXIT_CRITICAL(&encoderMux);  // Exit critical section
+    int64_t currT = esp_timer_get_time(); // Get current time in microseconds
+    int32_t deltaT = 0;
+
+    portENTER_CRITICAL_ISR(&encoderMux); // Enter critical section to safely update shared encoder state
+    deltaT = (int32_t)(currT - prevT_i); // Calculate time since last encoder event
+    deltaT_i = deltaT; // Update global variable for time delta
+    dir_i = increment; // Update global variable for direction
+    pos_i += increment; // Update encoder count based on direction
+    prevT_i = currT; // Update previous time for next calculation
+    portEXIT_CRITICAL_ISR(&encoderMux); // Exit critical section
 }
 
 
@@ -171,16 +179,21 @@ static void IRAM_ATTR encoder_isr_handler(void *arg)
     // - Read encoder state accumulated from ISR events
     // - Convert counts to position / speed
     // - Update private module state for PID calculations
-    int pos = 0;
+    int pos;
+    int dir;
+    int32_t deltaT;
+
     portENTER_CRITICAL(&encoderMux); // Enter critical section to safely read shared encoder state
-    pos = pos_i;                     // Read current encoder count
-    portEXIT_CRITICAL(&encoderMux);  // Exit critical section
+    pos = pos_i; // Read current encoder position
+    dir = dir_i; // Read current encoder direction
+    deltaT = deltaT_i; // Read time delta since last encoder event
+    portEXIT_CRITICAL(&encoderMux); // Exit critical section
 
-    long currT = esp_timer_get_time();                                 // Get current time in microseconds
-    float deltaT = ((float)(currT - prevT)) / 1000000.0;    // Calculate time difference in seconds
-    float velocity1 = (pos - posPrev) / deltaT;             // Calculate velocity in counts per second
-    posPrev = pos;                                          // Update previous position for next speed calculation
-    prevT = currT;                                          // Update previous time for next speed calculation
-
-    printf("Encoder Count: %d, Velocity: %.2f counts/s\n", pos, velocity1); // Print encoder count and velocity for testing
+    float velocity = 0.0f;
+    if (deltaT > 0) {
+        velocity = (dir * 1.0f) / (deltaT / 1000000.0f); // Calculate velocity in counts per second
+    } else {
+        velocity = 0.0f; // If no time has passed, velocity is zero
+    }
+    printf("Encoder Position: %d, Velocity: %.2f counts/s\n", pos, velocity); // Print encoder position and velocity for testing
 }
