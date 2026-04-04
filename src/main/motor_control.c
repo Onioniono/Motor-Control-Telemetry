@@ -1,8 +1,8 @@
 #include "motor_control.h"
 
-/* Test Variables for Motor Control */
-int motor_pwm_value = 255; // Test variable to hold current PWM value for motor control
-int motor_direction = 1; // 1 for forward, -1 for reverse (for testing purposes)
+/* Motor Control Variables */
+int motor_pwm_value = 0;      // Default PWM value (75% duty cycle for 8-bit resolution)
+int motor_direction = 1;        // 1 for forward, -1 for reverse 
 
 /* Motor Control Task Configuration */
 #define MOTOR_CONTROL_TASK_STACK_SIZE 4096
@@ -14,6 +14,14 @@ static void motor_control_task(void *pvParameters);     // FreeRTOS task functio
 static void IRAM_ATTR encoder_isr_handler(void *arg);   // ISR handler for encoder events, marked IRAM_ATTR for faster execution
 static void encoder_read(void);                         // Function to read encoder values and update state for PID calculations
 static float low_pass_filter(float v_now);              // Function to apply low-pass filter to velocity measurements (if needed)
+static void PID_control(void);                          // Function to compute PID control output based on target and current RPM (to be implemented)
+
+/* PID Variables */
+float target_rpm = RPM_DEFAULT;     // Target RPM for the motor, set by control loop or external commands
+static float current_rpm = 0.0f;    // Current RPM calculated from encoder readings, used for PID feedback
+static float kp = 5.0f;             // Proportional gain for PID controller
+static float ki = 0.0f;             // Integral gain for PID controller
+static float kd = 0.0f;             // Derivative gain for PID controller
 
 /* Encoder Variables */
 volatile int pos_i = 0;         // Current encoder position count
@@ -102,15 +110,8 @@ void motor_control_start(void)
 static void motor_control_task(void *pvParameters)
 {
     while (1) {
-        // Placeholder for PID control logic
-        // General idea:
-        // - Run the control loop here at a fixed sample rate.
-        // - Read processed encoder state
-        // - Compute PID
-        // - Update PWM/direction
-        // - Publish state if needed for telemetry
-
         encoder_read();
+        PID_control();
         motor_set(motor_pwm_value, motor_direction);
         vTaskDelay(pdMS_TO_TICKS(PID_SAMPLE_RATE_MS)); // Delay for PID sample rate
     }
@@ -133,6 +134,8 @@ void motor_set(int pwm, int dir)
     // Apply PWM Duty Cycle
     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, pwm);
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+    // Print for testing purposes
+    printf(", Motor PWM: %d, Direction: %s\n", pwm, (dir == 1) ? "Forward" : "Reverse");
 }
 
 /*--------------------------------------------------
@@ -200,10 +203,14 @@ static void IRAM_ATTR encoder_isr_handler(void *arg)
         rpm = 0.0f;         // If no time has passed, rpm is zero
     }
     
+    portENTER_CRITICAL(&encoderMux);    // Enter critical section to safely update current RPM state
+    current_rpm = rpm;                  // Update current RPM for PID feedback
+    portEXIT_CRITICAL(&encoderMux);     // Exit critical section
+
     // For testing purposes, print the encoder velocity in counts per second
     //printf("Velocity: %.2f counts/s\n", velocity);
     // For testing purposes, print the encoder rpm
-    printf("RPM: %.2f\n", rpm);
+    printf("Current RPM: %.2f", rpm);
 }
 
 /*--------------------------------------------------
@@ -220,4 +227,20 @@ static float low_pass_filter(float v_now)
     v_prev = v_now;
     v_filt = v_filt_now;
     return v_filt_now;
+}
+
+/*--------------------------------------------------
+ * Function:    PID Control Computation
+ * Description: Computes the PID control output based on the target RPM and current RPM,
+ *              updates motor PWM and direction accordingly
+ * Parameters:  None (uses global variables for target and current RPM)
+ * Returns:     None (updates motor control outputs directly)
+ *-------------------------------------------------*/
+static void PID_control(void)
+{
+    float error = target_rpm - fabs(current_rpm);
+    float control = kp * error;
+    (control > 0) ? (motor_direction = 1) : (motor_direction = -1); // Set direction based on sign of control output
+    int pwm = (int)fabs(control); // Use absolute value of control output for PWM duty cycle
+    motor_pwm_value = pwm; // Update global variable for motor PWM value
 }

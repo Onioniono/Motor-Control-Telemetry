@@ -8,6 +8,7 @@
 #include "driver/gpio.h"
 #include "driver/ledc.h"
 #include "esp_timer.h"
+#include <math.h>
 #include "config.h"
 
 /* Test Variables for Motor Control */

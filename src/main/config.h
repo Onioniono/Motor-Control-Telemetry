@@ -32,9 +32,11 @@
 
 //SYSTEM PARAMETERS
 /* Motor Control */
-#define RPM_DEFAULT 300
+#define RPM_DEFAULT 225         //75% of max RPM for testing
+#define RPM_MAX 300             //Max RPM of the motor (from datasheet)
 #define PID_SAMPLE_RATE_MS 10
 #define MOTOR_PWM_FREQ_HZ 5000
+#define PWM_RPM_CONVERSION 1.176470588f
 /* Encoder Control */
 #define ENCODER_PPR 240                 //Pulses Per Revolution for the encoder
 #define VELOCITY_RPM_CONVERSION 0.25f   // RPM (60 seconds / PPR) = 0.25 for 240 PPR encoder)
