@@ -20,8 +20,9 @@ static void PID_control(void);                          // Function to compute P
 float target_rpm = RPM_DEFAULT;     // Target RPM for the motor, set by control loop or external commands
 static float current_rpm = 0.0f;    // Current RPM calculated from encoder readings, used for PID feedback
 static float kp = 5.0f;             // Proportional gain for PID controller
-static float ki = 0.0f;             // Integral gain for PID controller
+static float ki = 20.0f;             // Integral gain for PID controller
 static float kd = 0.0f;             // Derivative gain for PID controller
+static float integral = 0.0f;
 
 /* Encoder Variables */
 volatile int pos_i = 0;         // Current encoder position count
@@ -239,7 +240,8 @@ static float low_pass_filter(float v_now)
 static void PID_control(void)
 {
     float error = target_rpm - fabs(current_rpm);
-    float control = kp * error;
+    integral = integral + error*(PID_SAMPLE_RATE_MS/1000.0f); // Integrate error over time (convert ms to seconds)
+    float control = kp * error + ki * integral;
     (control > 0) ? (motor_direction = 1) : (motor_direction = -1); // Set direction based on sign of control output
     int pwm = (int)fabs(control); // Use absolute value of control output for PWM duty cycle
     motor_pwm_value = pwm; // Update global variable for motor PWM value
