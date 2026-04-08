@@ -1,6 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+/* Pin Definitions *////////////////////////////////////////////////////////////////////////
 //ENCODER
 #define ENCODER_PIN_A 18
 #define ENCODER_PIN_B 19
@@ -10,7 +11,7 @@
 #define MOTOR_IN1_PIN 26        //Direction Control
 #define MOTOR_IN2_PIN 27        //Direction Control
                                 //00, 01, 10, 11 -> Stop, Forward, Reverse, Brake
-
+/* Unused Pins
 //MOSFET
 #define MOSFET_GATE_PIN GPIO_NUM_32      //Adversial Load PWM
 
@@ -25,12 +26,13 @@
 //DISPLAY (SHARED I2C PINS)
 #define DISPLAY_SDA_PIN I2C_SDA_PIN
 #define DISPLAY_SCL_PIN I2C_SCL_PIN
+*/
 
-//UART
+//UART - Declared but Unused
 #define UART_TX_PIN 17         //Stream to PC
 #define UART_RX_PIN 16         //Receive Commands from PC
 
-//SYSTEM PARAMETERS
+/* SYSTEM PARAMETERS *////////////////////////////////////////////////////////////////////////
 /* Motor Control */
 #define RPM_DEFAULT 225         //75% of max RPM for testing
 #define RPM_MAX 300             //Max RPM of the motor (from datasheet)
@@ -42,5 +44,6 @@
 #define VELOCITY_RPM_CONVERSION 0.25f   // RPM (60 seconds / PPR) = 0.25 for 240 PPR encoder)
 /* Telemetry */
 #define TELEMETRY_SAMPLE_RATE_MS 100
+#define UART UART_NUM_0  
 
 #endif /* CONFIG_H */

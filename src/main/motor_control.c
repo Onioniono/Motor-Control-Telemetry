@@ -8,6 +8,7 @@ int motor_direction = 1;        // 1 for forward, -1 for reverse
 #define MOTOR_CONTROL_TASK_STACK_SIZE 4096
 #define MOTOR_CONTROL_TASK_PRIORITY 2
 static TaskHandle_t motor_control_task_handle = NULL;
+SemaphoreHandle_t motor_data_mutex = NULL; // Mutex for protecting access to motor control variables between tasks
 
 /* Static function declarations */
 static void motor_control_task(void *pvParameters);     // FreeRTOS task function for motor control loop
@@ -18,11 +19,11 @@ static void PID_control(void);                          // Function to compute P
 
 /* PID Variables */
 float target_rpm = RPM_DEFAULT;     // Target RPM for the motor, set by control loop or external commands
-static float current_rpm = 0.0f;    // Current RPM calculated from encoder readings, used for PID feedback
-static float kp = 5.0f;             // Proportional gain for PID controller
-static float ki = 20.0f;             // Integral gain for PID controller
-static float kd = 0.0f;             // Derivative gain for PID controller
-static float integral = 0.0f;
+float current_rpm = 0.0f;    // Current RPM calculated from encoder readings, used for PID feedback
+float kp = 5.0f;             // Proportional gain for PID controller
+float ki = 20.0f;             // Integral gain for PID controller
+float kd = 0.0f;             // Derivative gain for PID controller
+float integral = 0.0f;
 
 /* Encoder Variables */
 volatile int pos_i = 0;         // Current encoder position count
@@ -43,6 +44,9 @@ static float v_prev = 0.0f;  // Previous velocity value, used for low-pass filte
  *-------------------------------------------------*/
 void motor_control_init(void)
 {
+    // Create mutex for motor control variables
+    motor_data_mutex = xSemaphoreCreateMutex();
+    
     //Motor Driver Pins
     gpio_reset_pin(MOTOR_PWM_PIN);
     gpio_reset_pin(MOTOR_IN1_PIN);
