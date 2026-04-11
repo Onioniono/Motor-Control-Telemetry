@@ -92,7 +92,7 @@ static void telemetry_read(char *buf, size_t len)
     int local_pwm_value = motor_pwm_value;              // Read current motor PWM value for telemetry output
     int local_motor_direction = motor_direction;        // Read current motor direction for telemetry output
     xSemaphoreGive(motor_data_mutex);                   // Give mutex after reading shared variables
-    snprintf(buf, len, "Target RPM: %.2f, Current RPM: %.2f, PWM: %d, Direction: %s\n", 
+    snprintf(buf, len, "%.2f, %.2f, %d, %d\n",          // Format telemetry data into buffer
              local_target_rpm, local_current_rpm, local_pwm_value, 
-             (local_motor_direction == 1) ? "Forward" : "Reverse"); // Format telemetry data into buffer
+             local_motor_direction);           
 }
