@@ -29,6 +29,7 @@ current_rpm_data = deque(maxlen=max_points)
 pwm_data = deque(maxlen=max_points)
 direction_data = deque(maxlen=max_points)
 sample_index = deque(maxlen=max_points)
+error_data = deque(maxlen=max_points)
 
 index = 0
 startup_ignore = 5  # Number of initial readings to ignore
@@ -58,17 +59,26 @@ def read_data():
         return None
 
 # Set up the plot
-fig, ax = plt.subplots()
+fig, (ax, ax2) = plt.subplots(2, 1, sharex=True)
 ax.set_ylim(0,300)                  # Adjust as needed based on expected RPM and PWM ranges
 ax.set_yticks(range(0, 301, 25))    # Set y-ticks for better readability
+ax2.set_ylim(-10, 10)               # Adjust as needed based on expected error range
+ax2.set_yticks(range(-10, 11, 2))   # Set y-ticks for better readability
+
 line1, = ax.plot([], [], label = 'Target RPM', color='#00FFFF',linewidth=1)
 line2, = ax.plot([], [], label = 'Current RPM',color='#FF4444',linewidth=1,marker='s',markersize=3)
 line3, = ax.plot([], [], label = 'PWM',color='#FFAA00',linewidth=1,marker='^',markersize=3)
+line4, = ax2.plot([], [], label = 'Error', color="#FF00B3", linewidth=1, marker='x', markersize=3)
 
 ax.legend()
 ax.set_xlabel('Sample')
-ax.set_ylabel('Value')
+ax.set_ylabel('RPM / PWM')
 ax.set_title('Real-Time Motor Data')
+
+ax2.legend()
+ax2.set_xlabel('Sample')
+ax2.set_ylabel('Error')
+ax2.set_title('RPM Error')
 
 # Animation function to update the plot
 def update(frame):
@@ -89,6 +99,7 @@ def update(frame):
         current_rpm_data.append(current_rpm)
         pwm_data.append(pwm)
         direction_data.append(direction)
+        error_data.append(target_rpm - current_rpm)
 
         # Increment the sample index
         index += 1
@@ -97,12 +108,13 @@ def update(frame):
         line1.set_data(sample_index, target_rpm_data)
         line2.set_data(sample_index, current_rpm_data)
         line3.set_data(sample_index, pwm_data)
+        line4.set_data(sample_index, error_data)
         
         # Adjust the plot limits
         ax.relim()
         ax.autoscale_view()
 
-    return line1, line2, line3
+    return line1, line2, line3, line4
 
 # Run the animation
 ani = FuncAnimation(fig, update, interval=50)  # Update every 50 ms
